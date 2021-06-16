@@ -47,7 +47,7 @@ rbac:
 
   psqlSecretName: registry-postgres-postgresql
   databaseUrl: jdbc:postgresql://registry-postgres-postgresql.rdpc-collab-qa:5432/registry
-  
+
 
 appConfig:
   # api configs
@@ -84,3 +84,5 @@ appConfig:
 
 extraEnv: {}
 
+networkPolicy:
+  enabled: false
