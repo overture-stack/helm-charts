@@ -52,12 +52,12 @@ spec:
             - name: SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_ORCID_CLIENTID
               valueFrom:
                 secretKeyRef:
-                  key: orcid-client-secret
-                  name: {{  .Values.appConfig.existingSecrets.orcid.clientIDKeyName  }}
+                  key: {{  .Values.appConfig.existingSecrets.orcid.clientIDKeyName  }}
+                  name: {{  .Values.appConfig.existingSecrets.orcid.secretName  }}
             - name: SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_ORCID_CLIENTSECRET
               valueFrom:
                 secretKeyRef:
-                  key: orcid-client-secret
+                  key: {{  .Values.appConfig.existingSecrets.orcid.secretKeyName  }}
                   name: {{  .Values.appConfig.existingSecrets.orcid.secretName  }}
             {{- end }}
 
