@@ -29,53 +29,85 @@ spec:
               value: "8081"
             - name: SPRING_PROFILES_ACTIVE
               value: {{ .Values.appConfig.activeProfiles }}
+
+            {{ if .Values.appConfig.existingSecrets.google.secretName }}
             - name: SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_CLIENTID
-              value: {{ .Values.appConfig.googleClientID }}
+              valueFrom:
+                secretKeyRef:
+                  key: {{  .Values.appConfig.existingSecrets.google.clientIDKeyName }}
+                  name: {{  .Values.appConfig.existingSecrets.google.secretName | default (include "ego.fullname" .) }}
             - name: SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_CLIENTSECRET
               valueFrom:
                 secretKeyRef:
-                  name: {{ template "ego.fullname" . }}
-                  key: google-client-secret
+                  key: {{  .Values.appConfig.existingSecrets.google.secretKeyName }}
+                  name: {{  .Values.appConfig.existingSecrets.google.secretName | default (include "ego.fullname" .) }}
             - name: SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_GOOGLE_AUTHORIZATIONURI
               value: {{ .Values.appConfig.googleAuthorizationUri }}
             - name: SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_REDIRECTURI
               value: "https://{{ .Values.appConfig.host }}{{ .Values.appConfig.apiPath }}/oauth/code/google"
+            {{- end }}
+
+            {{ if .Values.appConfig.existingSecrets.orcid.secretName }}
             - name: SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_ORCID_CLIENTID
-              value: {{ .Values.appConfig.orcidClientID }}
+              valueFrom:
+                secretKeyRef:
+                  key: {{  .Values.appConfig.existingSecrets.orcid.clientIDKeyName  }}
+                  name: {{  .Values.appConfig.existingSecrets.orcid.secretName  }}
             - name: SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_ORCID_CLIENTSECRET
               valueFrom:
                 secretKeyRef:
-                  name: {{ template "ego.fullname" . }}
-                  key: orcid-client-secret
+                  key: {{  .Values.appConfig.existingSecrets.orcid.secretKeyName  }}
+                  name: {{  .Values.appConfig.existingSecrets.orcid.secretName  }}
             - name: SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_ORCID_REDIRECTURI
               value: "https://{{ .Values.appConfig.host }}{{ .Values.appConfig.apiPath }}/oauth/code/orcid"
+            {{- end }}
+
+            {{ if .Values.appConfig.existingSecrets.linkedin.secretName }}
             - name: SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_LINKEDIN_CLIENTID
-              value: {{ .Values.appConfig.linkedInClientID }}
+              valueFrom:
+                secretKeyRef:
+                  key: {{  .Values.appConfig.existingSecrets.linkedin.clientIDKeyName }}
+                  name: {{  .Values.appConfig.existingSecrets.linkedin.secretName }}
             - name: SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_LINKEDIN_CLIENTSECRET
               valueFrom:
                 secretKeyRef:
-                  name: {{ template "ego.fullname" . }}
-                  key: linkedin-client-secret
+                  key: {{  .Values.appConfig.existingSecrets.linkedin.clientIDKeyName }}
+                  name: {{  .Values.appConfig.existingSecrets.linkedin.secretName }}
             - name: SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_LINKEDIN_REDIRECTURI
               value: "https://{{ .Values.appConfig.host }}{{ .Values.appConfig.apiPath }}/oauth/code/linkedin"
+            {{- end }}
+
+            {{ if .Values.appConfig.existingSecrets.github.secretName }}
             - name: SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GITHUB_CLIENTID
-              value: {{ .Values.appConfig.githubClientID }}
+              valueFrom:
+                secretKeyRef:
+                  key: {{  .Values.appConfig.existingSecrets.github.clientIDKeyName }}
+                  name: {{  .Values.appConfig.existingSecrets.github.secretName }}
             - name: SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GITHUB_CLIENTSECRET
               valueFrom:
                 secretKeyRef:
-                  name: {{ template "ego.fullname" . }}
-                  key: github-client-secret
+                  key: {{  .Values.appConfig.existingSecrets.github.secretKeyName }}
+                  name: {{  .Values.appConfig.existingSecrets.github.secretName }}
             - name: SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GITHUB_REDIRECTURI
               value: "https://{{ .Values.appConfig.host }}{{ .Values.appConfig.apiPath }}/oauth/code/github"
+            {{- end }}
+
+
+            {{ if .Values.appConfig.existingSecrets.facebook.secretName }}
             - name: SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_FACEBOOK_CLIENTID
-              value: {{ .Values.appConfig.facebookClientID | quote }}
+              valueFrom:
+                secretKeyRef:
+                  key: {{  .Values.appConfig.existingSecrets.facebook.clientIDKeyName }}
+                  name: {{  .Values.appConfig.existingSecrets.facebook.secretName }}
             - name: SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_FACEBOOK_CLIENTSECRET
               valueFrom:
                 secretKeyRef:
-                  name: {{ template "ego.fullname" . }}
-                  key: facebook-client-secret
+                  key: {{  .Values.appConfig.existingSecrets.facebook.clientIDKeyName }}
+                  name: {{  .Values.appConfig.existingSecrets.facebook.secretName }}
             - name: SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_FACEBOOK_REDIRECTURI
               value: "https://{{ .Values.appConfig.host }}{{ .Values.appConfig.apiPath }}/oauth/code/facebook"
+            {{- end }}
+
             - name: SPRING_DATASOURCE_URL
               value: {{ .Values.appConfig.databaseUrl }}
             - name: SPRING_DATASOURCE_USERNAME
@@ -84,8 +116,8 @@ spec:
             - name: SPRING_DATASOURCE_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Values.appConfig.psqlSecretName }}
                   key: {{ .Values.appConfig.psqlSecretKey }}
+                  name: {{ .Values.appConfig.psqlSecretName }}
             {{- end  }}
             - name: SPRING_FLYWAY_ENABLED
               value: "true"
