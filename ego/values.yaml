@@ -80,7 +80,7 @@ appConfig:
   githubClientID: placeholder
   githubClientSecret: ""
   googleAuthorizationUri: ""
-  googleClientID: placeholder
+  googleClientID: ""
   googleClientSecret: ""
   host: ego.local
   keycloakClientID: placeholder
@@ -94,7 +94,27 @@ appConfig:
   psqlUsername: ""
   swaggerBaseUrl:
   swaggerHost:
-
+  existingSecrets:
+    google:
+      secretName: ""
+      secretKeyName: ""
+      clientIDKeyName: ""
+    orcid:
+      secretName: ""
+      secretKeyName: ""
+      clientIDKeyName: ""
+    linkedin:
+      secretName: ""
+      secretKeyName: ""
+      clientIDKeyName: ""
+    github:
+      secretName: ""
+      secretKeyName: ""
+      clientIDKeyName: ""
+    facebook:
+      secretName: ""
+      secretKeyName: ""
+      clientIDKeyName: ""
   # ui configs
   apiTokenDurationDays: "30"
   defaultProvider: ""
@@ -110,3 +130,39 @@ appConfig:
   uiPassportEnabled: ""
 
 extraEnv: {}
+# extraEnvYaml:
+#     - name: SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_CLIENTID
+#       valueFrom:
+#         secretKeyRef:
+#           key: client-id
+#           name: google-credentials
+#     - name: SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_CLIENTSECRET
+#       valueFrom:
+#         secretKeyRef:
+#           key: client-secret
+#           name: google-credentials
+#     - name: SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_ORCID_CLIENTSECRET
+#       valueFrom:
+#         secretKeyRef:
+#           key: orcid-client-secret
+#           name: ego
+#     - name: SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_LINKEDIN_CLIENTSECRET
+#       valueFrom:
+#         secretKeyRef:
+#           key: linkedin-client-secret
+#           name: ego
+#     - name: KEYCLOAK_CLIENT_CLIENTSECRET
+#       valueFrom:
+#         secretKeyRef:
+#           key: keycloak-client-secret
+#           name: ego
+#     - name: SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GITHUB_CLIENTSECRET
+#       valueFrom:
+#         secretKeyRef:
+#           key: github-client-secret
+#           name: ego
+#     - name: SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_FACEBOOK_CLIENTSECRET
+#       valueFrom:
+#         secretKeyRef:
+#           key: facebook-client-secret
+#           name: ego
