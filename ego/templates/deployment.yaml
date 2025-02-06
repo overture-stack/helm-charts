@@ -41,12 +41,11 @@ spec:
                 secretKeyRef:
                   key: {{  .Values.appConfig.existingSecrets.google.secretKeyName }}
                   name: {{  .Values.appConfig.existingSecrets.google.secretName | default (include "ego.fullname" .) }}
-            {{- end }}
-
             - name: SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_GOOGLE_AUTHORIZATIONURI
               value: {{ .Values.appConfig.googleAuthorizationUri }}
             - name: SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_REDIRECTURI
               value: "https://{{ .Values.appConfig.host }}{{ .Values.appConfig.apiPath }}/oauth/code/google"
+            {{- end }}
 
             {{ if .Values.appConfig.existingSecrets.orcid.secretName }}
             - name: SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_ORCID_CLIENTID
@@ -59,10 +58,9 @@ spec:
                 secretKeyRef:
                   key: {{  .Values.appConfig.existingSecrets.orcid.secretKeyName  }}
                   name: {{  .Values.appConfig.existingSecrets.orcid.secretName  }}
-            {{- end }}
-
             - name: SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_ORCID_REDIRECTURI
               value: "https://{{ .Values.appConfig.host }}{{ .Values.appConfig.apiPath }}/oauth/code/orcid"
+            {{- end }}
 
             {{ if .Values.appConfig.existingSecrets.linkedin.secretName }}
             - name: SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_LINKEDIN_CLIENTID
@@ -75,10 +73,9 @@ spec:
                 secretKeyRef:
                   key: {{  .Values.appConfig.existingSecrets.linkedin.clientIDKeyName }}
                   name: {{  .Values.appConfig.existingSecrets.linkedin.secretName }}
-            {{- end }}
-
             - name: SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_LINKEDIN_REDIRECTURI
               value: "https://{{ .Values.appConfig.host }}{{ .Values.appConfig.apiPath }}/oauth/code/linkedin"
+            {{- end }}
 
             {{ if .Values.appConfig.existingSecrets.github.secretName }}
             - name: SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GITHUB_CLIENTID
@@ -91,10 +88,10 @@ spec:
                 secretKeyRef:
                   key: {{  .Values.appConfig.existingSecrets.github.secretKeyName }}
                   name: {{  .Values.appConfig.existingSecrets.github.secretName }}
-            {{- end }}
-
             - name: SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GITHUB_REDIRECTURI
               value: "https://{{ .Values.appConfig.host }}{{ .Values.appConfig.apiPath }}/oauth/code/github"
+            {{- end }}
+
 
             {{ if .Values.appConfig.existingSecrets.facebook.secretName }}
             - name: SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_FACEBOOK_CLIENTID
@@ -107,10 +104,10 @@ spec:
                 secretKeyRef:
                   key: {{  .Values.appConfig.existingSecrets.facebook.clientIDKeyName }}
                   name: {{  .Values.appConfig.existingSecrets.facebook.secretName }}
-            {{- end }}
-
             - name: SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_FACEBOOK_REDIRECTURI
               value: "https://{{ .Values.appConfig.host }}{{ .Values.appConfig.apiPath }}/oauth/code/facebook"
+            {{- end }}
+
             - name: SPRING_DATASOURCE_URL
               value: {{ .Values.appConfig.databaseUrl }}
             - name: SPRING_DATASOURCE_USERNAME
