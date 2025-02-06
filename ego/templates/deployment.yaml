@@ -35,12 +35,12 @@ spec:
               valueFrom:
                 secretKeyRef:
                   key: {{  .Values.appConfig.existingSecrets.google.clientIDKeyName }}
-                  name: {{  .Values.appConfig.existingSecrets.google.secretName | default (include "ego.fullname" .) }}
+                  name: {{  .Values.appConfig.existingSecrets.google.secretName  }}
             - name: SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_CLIENTSECRET
               valueFrom:
                 secretKeyRef:
                   key: {{  .Values.appConfig.existingSecrets.google.secretKeyName }}
-                  name: {{  .Values.appConfig.existingSecrets.google.secretName | default (include "ego.fullname" .) }}
+                  name: {{  .Values.appConfig.existingSecrets.google.secretName  }}
             - name: SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_GOOGLE_AUTHORIZATIONURI
               value: {{ .Values.appConfig.googleAuthorizationUri }}
             - name: SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_REDIRECTURI
