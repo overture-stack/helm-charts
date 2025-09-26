@@ -1,15 +1,19 @@
 apiVersion: apps/v1
 kind: Deployment
+{{ $root := . }}
 metadata:
-  name: {{ include "stateless-svc.fullname" . }}
+  name: {{ include "stateless-svc.fullname" $root }}
   labels:
     {{- include "stateless-svc.labels" . | nindent 4 }}
     {{- include "stateless-svc.customLabels" . | nindent 4 }}
+
 spec:
   replicas: {{ .Values.replicaCount }}
+
   selector:
     matchLabels:
       {{- include "stateless-svc.selectorLabels" . | nindent 6 }}
+
   template:
     metadata:
       {{- with .Values.podAnnotations }}
@@ -20,34 +24,66 @@ spec:
       labels:
         {{- include "stateless-svc.selectorLabels" . | nindent 8 }}
         {{- include "stateless-svc.customLabels" . | nindent 8 }}
+
     spec:
-    {{- with .Values.imagePullSecrets }}
-      imagePullSecrets:
+      {{- with .Values.affinity }}
+      affinity:
         {{- toYaml . | nindent 8 }}
-    {{- end }}
-      serviceAccountName: {{ include "stateless-svc.serviceAccountName" . }}
-      securityContext:
-        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- end }}
       containers:
-        - name: {{ .Chart.Name }}
-          securityContext:
-            {{- toYaml .Values.securityContext | nindent 12 }}
+        - name: {{ include "stateless-svc.fullname" . }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- if or .Values.command .Values.args .Values.entrypoint -}}
+          {{- /* If explicit command/args provided, prioritize them */}}
+            {{- if .Values.command }}
+          command: {{ toYaml .Values.command | nindent 12 }}
+            {{- end }}
+
+            {{- if and .Values.args (not .Values.entrypoint) }}
+          args: {{ toYaml .Values.args | nindent 12 }}
+            {{- end }}
+
+          {{- /* Otherwise, if entrypoint provided, split into command+args */}}
+            {{- if and (not .Values.command) (not .Values.args) .Values.entrypoint }}
+            {{- $entrypoint := .Values.entrypoint }}
+              {{- if gt (len $entrypoint) 0 }}
+          command: {{ toYaml (list (index $entrypoint 0)) | nindent 12 }}
+              {{- end }}
+
+              {{- if or (gt (len $entrypoint) 1) .Values.cmd }}
+              {{- $entrypointArgs := list }}
+                {{- if gt (len $entrypoint) 1 }}
+                  {{- $entrypointArgs = slice $entrypoint 1 (len $entrypoint) }}
+                {{- end }}
+
+                {{- if .Values.cmd }}
+                  {{- $entrypointArgs = concat $entrypointArgs .Values.cmd }}
+                {{- end }}
+          args: {{ toYaml (slice $entrypoint 1 (len $entrypoint)) | nindent 12 }}
+              {{- end }}
+            {{- end }}
+          {{- end }}
+
+          {{- if or .Values.extraEnv .Values.extraEnvYaml }}
           env:
-{{- if .Values.extraEnv }}
-  {{- range $key, $value := .Values.extraEnv }}
-          - name: {{ $key }}
-            value: {{ $value | quote }}
-  {{- end }}
-{{- end }}
-{{- with .Values.extraEnvYaml }}
-          {{- toYaml . | nindent 10 }}
-{{- end }}
+            {{- if .Values.extraEnv }}
+              {{- range $key, $value := .Values.extraEnv }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+              {{- end }}
+            {{- end }}
+
+            {{- with .Values.extraEnvYaml }}
+              {{- toYaml . | nindent 10 }}
+            {{- end }}
+          {{- end }}
+
           ports:
             - name: http
               containerPort: {{ .Values.container.port }}
               protocol: TCP
+
           livenessProbe:
             httpGet:
               path: {{ .Values.probes.liveness.path }}
@@ -56,6 +92,7 @@ spec:
             timeoutSeconds: {{ .Values.probes.liveness.timeoutSeconds }}
             periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
             failureThreshold: {{ .Values.probes.liveness.failureThreshold }}
+
           readinessProbe:
             httpGet:
               path: {{ .Values.probes.readiness.path }}
@@ -64,33 +101,259 @@ spec:
             timeoutSeconds: {{ .Values.probes.readiness.timeoutSeconds }}
             periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
             failureThreshold: {{ .Values.probes.readiness.failureThreshold }}
+
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+
           volumeMounts:
-          {{- range .Values.mountSecrets }}
-            - name: {{ .name }}
-              mountPath: {{ .path }}
+            {{- define "renderEmptyDirMount" }}
+            - name: {{ index . 0 }}
+              mountPath: {{ index . 1 }}
+            {{- end }}
+
+            {{- define "renderVolumeFromSecretMount" }}
+            - name: {{ index . 0 }}
+              mountPath: {{ index . 1 }}
+              {{- if index . 2 -}}
+              readOnly: {{ index . 2 }}
+              {{- end }}
+            {{- end }}
+
+            {{- range $ei, $emptyDir := .Values.mountEmptyDirs }}
+              {{- $emptyDirVolName := "" -}}
+              {{- $path := $emptyDir.name | lower | replace "_" "-" -}}
+
+              {{- if $emptyDir.shared }}
+                {{- $emptyDirVolName = $path -}}
+              {{- else }}
+                {{- $emptyDirVolName := (printf "%s-%s" (include "stateless-svc.fullname" $root) $path) -}}
+              {{- end }}
+
+              {{- $mountPath := $emptyDir.path | default (printf "/tmp/%s" $path) -}}
+
+              {{- include "renderEmptyDirMount" (list $emptyDirVolName $mountPath) }}
+            {{- end }}
+
+            {{- range $i, $secretsVolume := .Values.mountSecrets }}
+              {{- $secretsVolName := "" -}}
+              {{- $mountPath := "" -}}
+              {{- $readOnly := "" -}}
+              {{- $path := "" -}}
+
+              {{- if kindIs "string" $secretsVolume }}
+                {{- $path = $secretsVolume | lower | replace "_" "-" -}}
+                {{- $secretsVolName = printf "%s-%s" (include "stateless-svc.fullname" $root) $path -}}
+                {{- $mountPath = printf "/tmp/%s" $path -}}
+              {{- else }}
+                {{- $path = $secretsVolume.name | lower | replace "_" "-" -}}
+                {{- $secretsVolName = printf "%s-%s" (include "stateless-svc.fullname" $root) $path -}}
+                {{- $mountPath = $secretsVolume.path | default (printf "/tmp/%s" $path) -}}
+                {{- if hasKey $secretsVolume "readOnly" }}
+                  {{- $readOnly = $secretsVolume.readOnly -}}
+                {{- end -}}
+              {{- end }}
+
+              {{- include "renderVolumeFromSecretMount" (list $secretsVolName $mountPath $readOnly) }}
+            {{- end }}
+
+        {{- /* sidecars */ -}}
+        {{- range $si, $sidecarFromValues := .Values.sidecars }}
+          {{""}}
+
+        {{- $sidecar := dict -}}
+          {{- range $key, $value := $sidecarFromValues }}
+            {{- if and
+              (ne $key "mountEmptyDirs")
+              (ne $key "mountSecrets")
+            }}
+              {{- $_ := set $sidecar $key $value -}}
+            {{- end }}
+          {{- end -}}
+
+        {{- $yaml := toYaml $sidecar | trim -}}
+        {{- $lines := splitList "\n" $yaml -}}
+          {{- if gt (len $lines) 0 }}
+        - {{ index $lines 0 }}
+            {{- range $si, $line := rest $lines }}
+          {{ $line | printf "%s" }}
+            {{- end }}
+          {{- end -}}
+
+          {{- if or $sidecarFromValues.mountEmptyDirs $sidecarFromValues.mountSecrets }}
+          volumeMounts:
+            {{- range $sidecarEmptyDir := $sidecarFromValues.mountEmptyDirs }}
+              {{- $emptyDirVolName := "" -}}
+              {{- $path := $sidecarEmptyDir.name | lower | replace "_" "-" -}}
+
+              {{- if $sidecarEmptyDir.shared }}
+                {{- $emptyDirVolName = $path -}}
+              {{- else }}
+                {{- $emptyDirVolName := (printf "%s-%s"
+                  $sidecarFromValues.name
+                  ($sidecarEmptyDir.name | lower | replace "_" "-")
+                ) -}}
+              {{- end }}
+
+              {{- $mountPath := $sidecarEmptyDir.path | default (printf "/tmp/%s" $path) -}}
+
+              {{- include "renderEmptyDirMount" (list $emptyDirVolName $mountPath) }}
+            {{- end }}
+
+            {{- range $j, $sidecarSecretsVolume := $sidecarFromValues.mountSecrets }}
+              {{- $sidecarSecretsVolName := "" -}}
+              {{- $mountPath := "" -}}
+              {{- $readOnly := "" -}}
+              {{- $path := "" -}}
+              {{- if kindIs "string" $sidecarSecretsVolume }}
+                {{- $path = $sidecarSecretsVolume | lower | replace "_" "-" -}}
+                {{- $sidecarSecretsVolName = printf "%s-%s" $sidecarFromValues.name $path -}}
+                {{- $mountPath = printf "/tmp/%s" $path -}}
+              {{- else }}
+                {{- $path = $sidecarSecretsVolume.name | lower | replace "_" "-" -}}
+                {{- $sidecarSecretsVolName = (printf "%s-%s"
+                  $sidecarFromValues.name
+                  ($sidecarSecretsVolume.name | lower | replace "_" "-")
+                ) -}}
+                {{- $mountPath = ($sidecarSecretsVolume.path |
+                  default (printf "/tmp/%s"
+                    ($sidecarSecretsVolume.secret.secretName | lower | replace "_" "-") |
+                    default $path
+                  )
+                ) -}}
+                {{- if hasKey $sidecarSecretsVolume "readOnly" }}
+                  {{- $readOnly = $sidecarSecretsVolume.readOnly -}}
+                {{- end }}
+              {{- end -}}
+
+              {{- include "renderVolumeFromSecretMount" (list $sidecarSecretsVolName $mountPath $readOnly) }}
+            {{- end }}
           {{- end }}
+        {{- end }}
+
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.affinity }}
-      affinity:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
+
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+
+      serviceAccountName: {{ include "stateless-svc.serviceAccountName" . }}
+
       {{- with .Values.tolerations }}
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+
       volumes:
-      {{- range .Values.mountSecrets }}
-        - name: {{ .name }}
+        {{- /* object to help prevent duplicate volumes from the container and its sidecars' */ -}}
+        {{- $seen := dict -}}
+
+        {{- define "renderEmptyDir" }}
+        - name: {{ index . 0 }}
+          emptyDir: {}
+        {{- end }}
+
+        {{- define "renderVolumeFromSecret" }}
+        - name: {{ index . 0 }}
           secret:
-            secretName: {{ .name }}
-            defaultMode: {{ default "0644" .defaultMode }}
-      {{- end }}
+            secretName: {{ index . 1 }}
+            defaultMode: {{ index . 2 }}
+        {{- end }}
 
+        {{- range $ei, $emptyDir := .Values.mountEmptyDirs }}
+          {{- $emptyDirVolName := "" -}}
+          {{- $givenName := ($emptyDir.name | lower | replace "_" "-") -}}
 
+          {{- if $emptyDir.shared }}
+            {{- $emptyDirVolName = $givenName -}}
+          {{- else }}
+            {{- $emptyDirVolName = (printf "%s-%s"
+              (include "stateless-svc.fullname" $root)
+              $givenName
+            ) -}}
+          {{- end -}}
 
+          {{- if not (hasKey $seen $emptyDirVolName) }}
+            {{- $_ := set $seen $emptyDirVolName true -}}
+            {{- include "renderEmptyDir" (list $emptyDirVolName) }}
+          {{- end }}
+        {{- end }}
 
+        {{- range $i, $secretsVolume := .Values.mountSecrets }}
+          {{- $secretsVolName := "" -}}
+          {{- $secretName := "" -}}
+          {{- $mode := "0644" -}}
+
+          {{- if kindIs "string" $secretsVolume }}
+            {{- $secretsVolName = (printf "%s-%s"
+              (include "stateless-svc.fullname" $root)
+              ($secretsVolume | lower | replace "_" "-")
+            ) -}}
+            {{- $secretName = $secretsVolume -}}
+          {{- else }}
+            {{- $secretsVolName := (printf "%s-%s"
+              (include "stateless-svc.fullname" $root)
+              ($secretsVolume.name | lower | replace "_" "-")
+            ) -}}
+            {{- $secretName = $secretsVolume.secret.secretName | default $secretsVolume.name -}}
+            {{- $mode = ($secretsVolume.defaultMode | default "0644") -}}
+          {{- end }}
+
+          {{- if not (hasKey $seen $secretsVolName) }}
+            {{- $_ := set $seen $secretsVolName true -}}
+            {{- include "renderVolumeFromSecret" (list $secretsVolName $secretName $mode) }}
+          {{- end }}
+        {{- end }}
+
+        {{- range $si, $sidecar := .Values.sidecars }}
+          {{- range $sidecarEmptyDir := $sidecar.mountEmptyDirs }}
+            {{- $emptyDirVolName := "" -}}
+            {{- $givenName := ($sidecarEmptyDir.name | lower | replace "_" "-") -}}
+
+            {{- if $sidecarEmptyDir.shared }}
+              {{- $emptyDirVolName = $givenName -}}
+            {{- else }}
+              {{- $emptyDirVolName = (printf "%s-%s" $sidecar.name $givenName) -}}
+            {{- end }}
+
+            {{- if not (hasKey $seen $emptyDirVolName) }}
+              {{- $_ := set $seen $emptyDirVolName true -}}
+              {{- include "renderEmptyDir" (list $emptyDirVolName) }}
+            {{- end }}
+          {{- end }}
+
+          {{- range $sidecarSecretsVolume := $sidecar.mountSecrets }}
+            {{- $sidecarSecretsVolName := "" -}}
+            {{- $secretName := "" -}}
+            {{- $mode := "0644" -}}
+
+            {{- if kindIs "string" $sidecarSecretsVolume }}
+              {{- $sidecarSecretsVolName = (printf "%s-%s"
+                $sidecar.name
+                ($sidecarSecretsVolume | lower | replace "_" "-")
+              ) -}}
+              {{- $secretName = $sidecarSecretsVolume -}}
+            {{- else }}
+              {{- $sidecarSecretsVolName = (printf "%s-%s"
+                $sidecar.name
+                ($sidecarSecretsVolume.name | lower | replace "_" "-")
+              ) -}}
+              {{- $secretName = $sidecarSecretsVolume.secret.secretName | default $sidecarSecretsVolume.name -}}
+              {{- $mode = ($sidecarSecretsVolume.defaultMode | default "0644") -}}
+            {{- end }}
+
+            {{- if not (hasKey $seen $sidecarSecretsVolName) }}
+              {{- $_ := set $seen $sidecarSecretsVolName true -}}
+              {{- include "renderVolumeFromSecret" (list $sidecarSecretsVolName $secretName $mode) }}
+            {{- end }}
+          {{- end }}
+        {{- end }}
