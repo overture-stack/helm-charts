@@ -4,14 +4,24 @@ Repository to keep helm charts for the overture projects.
 
 # How to package and publish:
 
-- Turn a chart into a versioned chart archive file
+-   Bump the chart version following SemVer standards
+-   Turn a chart into a versioned chart archive file
 
 ```
-helm package ./mychart
+  helm package ./mychart
 ```
 
-- then copy the chart to the charts-server repository (another git repository in overture-stack)
-- then you need to reindex — see charts-server for instructions.
+-   See the [charts-server's ReadMe](https://github.com/overture-stack/charts-server) for further instructions.
+
+### Implementation notes:
+
+-   You're able to test your changes locally through
+
+```
+  helm template <packaged chart or folder> <optionally: -f values.yaml>
+```
+
+---
 
 # Upgrade notes
 
@@ -20,15 +30,15 @@ helm package ./mychart
 This app now uses Helm configMaps to store a few config files.
 When the chart is deployed the following configmaps are created, containing these files:
 
-### In Server (formerly API), `arranger-server-configs`
+### In Server (formerly "API"), `arranger-server-configs`
 
-- base.json
-- extended.json
-- facets.json
-- matchbox.json
-- table.json
+-   base.json
+-   extended.json
+-   facets.json
+-   matchbox.json
+-   table.json
 
-Each of these default to `{}`, and should customised by passing values into helm in the follwowing fashion
+Each of these default to `{}`, and should customized by passing values into helm in the following fashion
 
 ```
 serverConfigs: {
@@ -40,8 +50,8 @@ serverConfigs: {
 
 ### And in Admin UI, `arranger-nginx-config`
 
-- nginx.conf
-- env-config.js
+-   nginx.conf
+-   env-config.js
 
 | Customizable parameter     | Description       | Default |
 | -------------------------- | ----------------- | ------- |
