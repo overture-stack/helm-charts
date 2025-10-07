@@ -55,7 +55,8 @@ ingress:
 mountEmptyDirs: []
   # - name: <resource>-emptydir # <- automatic suffix
   #   path: <target folder>
-  #   subPath: <file name> (optional, for specific file instead of folder)
+  #   preserveOriginal: <boolean> (optional, keep the existing files in path, or copy from altSourcePath)
+  #   copyFromAltPath: <alternate source folder> (optional, lets you replace the files in the path)
 
 mountSecrets: []
   # - name: <secret name>
