@@ -31,11 +31,10 @@ ingressApi:
   # className: private
   enabled: false
   hosts:
-    - host: ego.local
-      paths:
-        - path: /api/(.*)
-          pathType: ImplementationSpecific
-
+  - host: ego.local
+    paths:
+    - path: /api/(.*)
+      pathType: ImplementationSpecific
   # tls:
   #   - hosts:
   #     - ego.local
@@ -47,10 +46,10 @@ ingressUi:
   # className: private
   enabled: false
   hosts:
-    - host: ui.ego.local
-      paths:
-        - path: /
-          pathType: ImplementationSpecific
+  - host: ui.ego.local
+    paths:
+    - path: /
+      pathType: ImplementationSpecific
   # tls:
   #   - hosts:
   #     - ui.ego.local
@@ -130,6 +129,9 @@ appConfig:
   uiPassportEnabled: ""
 
 extraEnv: {}
+
+extraEnvYaml: []
+
 # extraEnvYaml:
 #     - name: SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_CLIENTID
 #       valueFrom:
