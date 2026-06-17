@@ -1,25 +1,18 @@
 # Overture Helm-charts
 
-Repository to keep helm charts for the overture projects.
+Repository for Helm charts used by the Overture stack.
 
-# How to package and publish:
+## Using these charts
 
--   Bump the chart version following SemVer standards
--   Turn a chart into a versioned chart archive file
-
-```
-  helm package ./mychart
+```shell
+helm install <release-name> oci://ghcr.io/overture-stack/helm-charts/<chart-name> --version <version>
 ```
 
--   See the [charts-server's ReadMe](https://github.com/overture-stack/charts-server) for further instructions.
+Charts are published as OCI artifacts to `ghcr.io/overture-stack/helm-charts`. No `helm repo add` step is required.
 
-### Implementation notes:
+## Publishing
 
--   You're able to test your changes locally through
-
-```
-  helm template <packaged chart or folder> <optionally: -f values.yaml>
-```
+Bump `version` in `<chart-name>/Chart.yaml` and push to `main`. Jenkins lints, packages, and publishes automatically. See [DEVELOPMENT.md](DEVELOPMENT.md) for the full workflow and local testing commands.
 
 ---
 
@@ -27,38 +20,106 @@ Repository to keep helm charts for the overture projects.
 
 ## Arranger
 
-This app now uses Helm configMaps to store a few config files.
-When the chart is deployed the following configmaps are created, containing these files:
+### Version 0.4.0 — breaking changes
 
-### In Server (formerly "API"), `arranger-server-configs`
+This release aligns the chart with the current Arranger search-server and introduces multi-catalogue support.
 
--   base.json
--   extended.json
--   facets.json
--   matchbox.json
--   table.json
+**Multi-catalogue config (replaces `config.components.*`):**
 
-Each of these default to `{}`, and should customized by passing values into helm in the following fashion
+Config files are now per-catalogue. Replace `config.components.*` with a `config.catalogues` list:
 
+```yaml
+# Old (pre-0.4.0)
+config:
+  components:
+    baseConfigs: { ... }
+    tableConfigs: { ... }
+
+# New
+config:
+  catalogues:
+    - id: my-catalogue   # DNS label: lowercase alphanumeric and hyphens only
+      configs:
+        base: { ... }
+        table: { ... }
 ```
-serverConfigs: {
-  baseConfigs: `path/to/base.json`,
-  extendedConfigs: `path/to/extended.json`,
-  ...
-}
+
+A single-catalogue deployment is one entry in the list. Each catalogue's config files are mounted at `<config.path>/<id>/` and discovered automatically by the server.
+
+**Deploying with Terraform:**
+
+Pass config files as decoded JSON objects — the chart's `toPrettyJson` step requires objects, not raw strings.
+
+```hcl
+values = [
+  file("helm/arranger-my-catalogue/values.yaml"),
+  jsonencode({
+    config = {
+      catalogues = [
+        {
+          id = "my-catalogue"
+          configs = {
+            extended = jsondecode(file("./helm/arranger-my-catalogue/configs/extended.json"))
+            facets   = jsondecode(file("./helm/arranger-my-catalogue/configs/facets.json"))
+            table    = jsondecode(file("./helm/arranger-my-catalogue/configs/table.json"))
+          }
+        }
+      ]
+    }
+  })
+]
 ```
 
-### And in Admin UI, `arranger-nginx-config`
+The `id` becomes the ConfigMap name suffix (`<release>-server-configs-<id>`) and must be a valid DNS label. For multiple catalogues, add additional entries to the `catalogues` list with distinct `id` values.
 
--   nginx.conf
--   env-config.js
+**Migrating from pre-0.4.0 Terraform:**
 
-| Customizable parameter     | Description       | Default |
-| -------------------------- | ----------------- | ------- |
-| `uiConfig.port`            | Nginx listen port | `""`    |
-| `uiConfig.ReactAppBaseURL` | Base url          | `""`    |
+The old pattern passed raw string file contents under top-level keys:
 
-Version 0.3.1
+```hcl
+# Old — no longer works in 0.4.0
+jsonencode({
+  "extendedConfigs" = file("./configs/extended.json")
+  "facetsConfigs"   = file("./configs/facets.json")
+  "tableConfigs"    = file("./configs/table.json")
+})
+```
+
+Replace with the `config.catalogues` structure above, wrapping each `file(...)` call with `jsondecode`.
+
+**Removed values:**
+
+| Removed | Replacement |
+|---|---|
+| `config.documentType` | Set `documentType` in the catalogue's `base.json` |
+| `config.elasticsearch.index` | Set `esIndex` in the catalogue's `base.json` |
+| `config.components.*` | `config.catalogues[].configs.*` |
+| `baseConfigs`, `extendedConfigs`, `facetsConfigs`, `matchboxConfigs`, `tableConfigs` (top-level fallbacks) | `config.catalogues[].configs.*` |
+| `apiConfig.*`, `apiImage.*`, `apiIngress.*` | `config.*`, `image.*`, `ingress.*` |
+| `uiConfig.*`, `uiImage.*`, `uiIngress.*` | UI sidecar removed |
+
+**Renamed values:**
+
+| Old | New |
+|---|---|
+| `config.port` | `config.serverPort` |
+| `config.maxDownloadRows` | `config.downloadMaxRows` |
+
+**New values:**
+
+| Value | Description |
+|---|---|
+| `config.catalogues[]` | List of catalogues; each requires a DNS-label `id` and optional `configs.*` |
+| `config.features.*` | Feature flags (`disableDownloads`, `disableFilters`, `disableGraphqlPlayground`, `disableSets`, `allowCustomDownloadMaxRows`) |
+| `config.graphql.maxAliases` / `maxDepth` | GraphQL security limits; leave unset for no limit |
+| `config.elasticsearch.setsIndex` / `setsType` | Arranger sets index configuration |
+| `config.allowedCorsOrigins` | List of allowed CORS origins; omit to allow all |
+| `config.pingMs` | Health check ping interval in milliseconds |
+| `config.searchEngine` | `elasticsearch` or `opensearch`; leave empty to auto-detect |
+
+**`config.path` is now absolute (`/app/configs`)** and is used as both the `CONFIGS_PATH` env var and the container mount path. Override if your image uses a different location.
+
+### Version 0.3.1
 
 all `api<values>` are now just `<values>`:
 

@@ -35,66 +35,93 @@ spec:
       containers:
         - name: server
           env:
-            - name: CONFIG_PATH # route for config files within the container
+            {{- if .Values.config.allowedCorsOrigins }}
+            - name: ALLOWED_CORS_ORIGINS
+              value: {{ .Values.config.allowedCorsOrigins | join "," }}
+            {{- end }}
+
+            - name: ALLOW_CUSTOM_DOWNLOAD_MAX_ROWS
+              value: {{ .Values.config.features.allowCustomDownloadMaxRows | quote }}
+
+            - name: CONFIGS_PATH
               value: {{ .Values.config.path }}
 
-            - name: DOCUMENT_TYPE
-              value: {{ .Values.config.documentType }}
+            - name: DISABLE_DOWNLOADS
+              value: {{ .Values.config.features.disableDownloads | quote }}
+
+            - name: DISABLE_FILTERS
+              value: {{ .Values.config.features.disableFilters | quote }}
+
+            - name: DISABLE_GRAPHQL_PLAYGROUND
+              value: {{ .Values.config.features.disableGraphqlPlayground | quote }}
+
+            - name: DISABLE_SETS
+              value: {{ .Values.config.features.disableSets | quote }}
+
+            - name: DOWNLOAD_MAX_ROWS
+              value: {{ .Values.config.downloadMaxRows | quote }}
 
             - name: DOWNLOAD_STREAM_BUFFER_SIZE
               value: {{ .Values.config.downloadStreamBufferSize | quote }}
 
-            - name: MAX_DOWNLOAD_ROWS
-              value: {{ .Values.config.maxDownloadRows | quote }}
+            - name: ENABLE_ADMIN
+              value: {{ .Values.config.dev.admin | quote }}
+
+            - name: ENABLE_DEBUG
+              value: {{ .Values.config.dev.debug | quote }}
+
+            - name: ENABLE_LOGS
+              value: {{ .Values.config.dev.logs | quote }}
+
+            - name: ES_ARRANGER_SETS_INDEX
+              value: {{ .Values.config.elasticsearch.setsIndex }}
+
+            - name: ES_ARRANGER_SETS_TYPE
+              value: {{ .Values.config.elasticsearch.setsType }}
+
+            - name: ES_HOST
+              value: {{ .Values.config.elasticsearch.host }}
+
+            {{- if .Values.config.elasticsearch.username }}
+            - name: ES_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.config.elasticsearch.password.secretName }}
+                  key: {{ .Values.config.elasticsearch.username }}
+
+            - name: ES_USER
+              value: {{ .Values.config.elasticsearch.username }}
+            {{- end }}
+
+            {{- if .Values.config.graphql.maxAliases }}
+            - name: GRAPHQL_MAX_ALIASES
+              value: {{ .Values.config.graphql.maxAliases | quote }}
+            {{- end }}
+
+            {{- if .Values.config.graphql.maxDepth }}
+            - name: GRAPHQL_MAX_DEPTH
+              value: {{ .Values.config.graphql.maxDepth | quote }}
+            {{- end }}
 
             - name: MAX_RESULTS_WINDOW
               value: {{ .Values.config.maxResultsWindow | quote }}
 
-            - name: PING_PATH
-              value: {{ .Values.config.pingEndpoint }}
+            - name: PING_MS
+              value: {{ .Values.config.pingMs | quote }}
 
-            - name: PORT
-              value: {{ coalesce .Values.apiConfig.port .Values.config.port | quote }}
+            - name: PING_PATH
+              value: {{ .Values.config.probesEndpoint }}
 
             - name: ROW_ID_FIELD_NAME
               value: {{ .Values.config.rowIdFieldName }}
 
-          # Elasticsearch
-            - name: ES_HOST
-              value: {{ coalesce .Values.config.elasticsearch.host .Values.apiConfig.es.host }}
-
-            - name: ES_INDEX
-              value: {{ .Values.config.elasticsearch.index }}
-
-            {{- if (coalesce .Values.config.elasticsearch.username .Values.apiConfig.es.username) }}
-            - name: ES_USER
-              value: {{coalesce .Values.config.elasticsearch.username .Values.apiConfig.es.username }}
-
-            - name: ES_PASS
-              valueFrom:
-                secretKeyRef:
-                  name: {{coalesce .Values.config.elasticsearch.password.secretName .Values.apiConfig.es.password.secretName }}
-                  key: {{coalesce .Values.config.elasticsearch.username .Values.apiConfig.es.username }}
+            {{- if .Values.config.searchEngine }}
+            - name: SEARCH_ENGINE
+              value: {{ .Values.config.searchEngine }}
             {{- end }}
 
-          # dev flags
-            - name: DEBUG
-              value: {{ .Values.config.dev.debug | quote }}
-
-            - name: ENABLE_ADMIN
-              value: {{ .Values.config.dev.admin | quote }}
-
-            - name: ENABLE_LOGS
-              value: {{ .Values.config.dev.logs | quote}}
-
-          # extras
-
-          {{- if .Values.apiConfig.extraEnv }}
-            {{- range $key, $value := .Values.apiConfig.extraEnv}}
-            - name: {{ $key }}
-              value: {{ $value | quote }}
-            {{- end }}
-          {{- end }}
+            - name: SERVER_PORT
+              value: {{ .Values.config.serverPort | quote }}
 
           {{- if .Values.extraEnv }}
             {{- range $key, $value := .Values.extraEnv}}
@@ -103,14 +130,14 @@ spec:
             {{- end }}
           {{- end }}
 
-          image: "{{ coalesce .Values.apiImage.repository .Values.image.repository }}:{{ coalesce .Values.apiImage.tag .Values.image.tag .Chart.AppVersion }}"
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
 
-          imagePullPolicy: {{ coalesce .Values.apiImage.pullPolicy .Values.image.pullPolicy }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
 
           livenessProbe:
             httpGet:
               path: {{ .Values.probes.liveness.path }}
-              port: {{ .Values.config.port }}
+              port: {{ .Values.config.serverPort }}
             initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
             timeoutSeconds: {{ .Values.probes.liveness.timeoutSeconds }}
             periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
@@ -118,13 +145,13 @@ spec:
 
           ports:
             - name: {{ .Chart.Name }}-server
-              containerPort: {{ coalesce .Values.apiConfig.port .Values.config.port }}
+              containerPort: {{ .Values.config.serverPort }}
               protocol: TCP
 
           readinessProbe:
             httpGet:
               path: {{ .Values.probes.readiness.path }}
-              port: {{ .Values.config.port }}
+              port: {{ .Values.config.serverPort }}
             initialDelaySeconds: {{ .Values.probes.readiness.initialDelaySeconds }}
             timeoutSeconds: {{ .Values.probes.readiness.timeoutSeconds }}
             periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
@@ -139,7 +166,7 @@ spec:
           startupProbe:
             httpGet:
               path: {{ .Values.probes.startup.path }}
-              port: {{ .Values.config.port }}
+              port: {{ .Values.config.serverPort }}
             initialDelaySeconds: {{ .Values.probes.startup.initialDelaySeconds }}
             timeoutSeconds: {{ .Values.probes.startup.timeoutSeconds }}
             periodSeconds: {{ .Values.probes.startup.periodSeconds }}
@@ -152,48 +179,11 @@ spec:
             - name: server-tmp-emptydir
               mountPath: /tmp
 
-            - name: server-configs
-              mountPath: /app/modules/server/configs/
+            {{- range .Values.config.catalogues }}
+            - name: server-configs-{{ .id }}
+              mountPath: {{ $.Values.config.path }}/{{ .id }}
               readOnly: true
-
-      {{- if .Values.uiConfig.enabled }}
-        - name: ui
-          securityContext:
-            {{- toYaml .Values.securityContext | nindent 12 }}
-          image: "{{ .Values.uiImage.repository }}:{{ .Values.uiImage.tag | default .Chart.AppVersion }}"
-          imagePullPolicy: {{ .Values.uiImage.pullPolicy }}
-
-          ports:
-            - name: {{ .Chart.Name }}-ui
-              containerPort: {{ .Values.uiConfig.port }}
-              protocol: TCP
-
-          resources:
-            {{- toYaml .Values.resources | nindent 12 }}
-
-          env:
-            - name: PORT
-              value: {{ .Values.uiConfig.port | quote }}
-            - name: REACT_APP_ARRANGER_ADMIN_ROOT
-              value: {{ .Values.uiConfig.serverUrl }}/admin/graphql
-            - name: NGINX_CONF_PATH
-              value: /etc/nginx/nginx.conf
-
-          volumeMounts:
-          - name: nginx-config
-            mountPath: /etc/nginx/nginx.conf
-            subPath: nginx.conf
-
-          - name: nginx-config
-            mountPath: /etc/nginx/env-config.js
-            subPath: env-config.js
-
-          - name: nginx-cache-emptydir
-            mountPath: /var/cache/nginx
-
-          - name: nginx-run-emptydir
-            mountPath: /var/run
-      {{- end }}
+            {{- end }}
 
     {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
@@ -222,18 +212,8 @@ spec:
         - name: server-tmp-emptydir
           emptyDir: {}
 
-        - name: server-configs
+        {{- range .Values.config.catalogues }}
+        - name: server-configs-{{ .id }}
           configMap:
-            name: {{ include "arranger.fullname" . }}-server-configs
-
-      {{- if .Values.uiConfig.enabled }}
-        - name: nginx-config
-          configMap:
-            name: {{ include "arranger.fullname" . }}-nginx-config
-
-        - name: nginx-cache-emptydir
-          emptyDir: {}
-
-        - name: nginx-run-emptydir
-          emptyDir: {}
-      {{- end }}
+            name: {{ include "arranger.fullname" $ }}-server-configs-{{ .id }}
+        {{- end }}

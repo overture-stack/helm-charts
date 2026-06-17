@@ -9,61 +9,81 @@ autoscaling:
   # targetMemoryUtilizationPercentage: 80
 
 config:
-  documentType:
-  downloadStreamBufferSize: 2000
-  maxDownloadRows: 100
-  maxResultsWindow: 10000
-  path: ./configs # relative to the Server's own folder
-  port: 5050
-  probesEndpoint: &probesEndpoint "/ping"
-  rowIdFieldName: id
+  allowedCorsOrigins: []
+  # - https://my-app.example.com
 
-  components:
-    baseConfigs:
-    extendedConfigs:
-    facetsConfigs:
-    matchboxConfigs:
-    tableConfigs:
+  catalogues: []
+  # (Example:)
+  # - id: my-catalogue   # DNS label: lowercase alphanumeric and hyphens only
+  #   configs:
+  #     base:
+  #     extended:
+  #     facets:
+  #     matchbox:
+  #     table:
 
   dev:
     admin: false
     debug: false
     logs: false
 
+  downloadMaxRows: 100
+  downloadStreamBufferSize: 2000
+
   elasticsearch:
     host: http://elasticsearch:9200
-    index:
     password:
       secretName:
-    username: #If empty or not defined, ES configured without auth
+    setsIndex: arranger-sets
+    setsType: arranger-sets
+    username:
+      # if empty or not defined, ES configured without auth
 
-extraEnv:
-  # placeholder for undetermined custom env vars
+  features:
+    allowCustomDownloadMaxRows: false
+    disableDownloads: false
+    disableFilters: false
+    disableGraphqlPlayground: false
+    disableSets: false
+
+  graphql:
+    # leave empty for no limit
+    maxAliases:
+    maxDepth:
+
+  maxResultsWindow: 10000
+  path: /app/configs
+  pingMs: 2200
+  probesEndpoint: &probesEndpoint "/ping"
+  rowIdFieldName: id
+  searchEngine: "" # leave empty to auto-detect from ES/OpenSearch version API
+  serverPort: 5050
+
+extraEnv: # placeholder for undetermined custom env vars
 
 fullnameOverride:
 
 image:
-  repository: ghcr.io/overture-stack/arranger-server
+  repository: ghcr.io/overture-stack/arranger-search-server
   pullPolicy: Always
-  # Overrides the image tag whose default is the chart appVersion.
-  tag: "latest"
+  tag: "latest" # Overrides the image tag whose default is the chart appVersion
 
 imagePullSecrets: []
 
 ingress:
-  enabled: false
   # annotations:
   #   cert-manager.io/cluster-issuer: letsencrypt
   # className: private
+  enabled: false
   hosts:
-    - host: arranger-server.local
-      paths:
-        - path: /
-          pathType: ImplementationSpecific
+  - host: arranger-server.local
+    paths:
+    - path: /
+      pathType: ImplementationSpecific
   tls:
-    - hosts:
-        - arranger-server.local
-      secretName: arranger-server.local
+  - hosts:
+    - arranger-server.local
+    secretName: arranger-server.local
 
 nameOverride:
 
@@ -100,8 +120,7 @@ probes:
 
 replicaCount: 1
 
-resources:
-  {}
+resources: {}
   # We usually recommend not to specify default resources and to leave this as a conscious
   # choice for the user. This also increases chances charts run on environments with little
   # resources, such as Minikube. If you do want to specify resources, uncomment the following
@@ -116,7 +135,7 @@ resources:
 securityContext:
   capabilities:
     drop:
-      - ALL
+    - ALL
   readOnlyRootFilesystem: true
   runAsNonRoot: true
   runAsUser: 1000
@@ -126,75 +145,10 @@ service:
   port: 80
   portName: arranger-server
 
-  # deprecate
-  apiPort:
-  uiPort: 81
-  uiPortName: arranger-ui
-
 serviceAccount:
-  # Specifies whether a service account should be created
   create: true
-  # Annotations to add to the service account
   annotations: {}
-  # The name of the service account to use.
-  # If not set and create is true, a name is generated using the fullname template
   name:
+    # If not set and create is true, a name is generated using the fullname template
 
 tolerations: []
-
-# fallbacks
-baseConfigs:
-extendedConfigs:
-facetsConfigs:
-matchboxConfigs:
-tableConfigs:
-
-####################
-# To be deprecated
-####################
-
-apiConfig:
-  es:
-    host: ""
-    password:
-      secretName: ""
-    username: ""
-  port: ""
-  extraEnv:
-    # placeholder for undetermined custom env vars
-
-apiImage:
-  pullPolicy: ""
-  repository: ""
-  tag: ""
-
-apiIngress:
-  enabled: false
-  hosts: []
-
-uiImage:
-  repository: ghcr.io/overture-stack/arranger-ui
-  pullPolicy: Always
-  # Overrides the image tag whose default is the chart appVersion.
-  tag: "latest"
-
-uiConfig:
-  enabled: false
-  serverUrl: https://arranger-server.local/api
-  port: 8080
-  ReactAppBaseURL: ""
-
-uiIngress:
-  enabled: false
-  # annotations:
-  #   cert-manager.io/cluster-issuer: letsencrypt
-  # className: private
-  hosts:
-    - host: arranger-ui.local
-      paths:
-        - path: /
-          pathType: ImplementationSpecific
-  tls:
-    - hosts:
-        - arranger-ui.local
-      secretName: arranger-ui.local

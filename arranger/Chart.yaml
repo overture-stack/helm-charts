@@ -1,16 +1,6 @@
 apiVersion: v2
 
-# Note: must run `helm dependency update` at least once to install 'common' (e.g. from within this folder)
-dependencies:
-  - name: common
-    repository: https://charts.bitnami.com/bitnami
-    tags:
-      - bitnami-common
-    version: 2.x.x
-
 description: A Helm chart for Arranger
-
-engine: gotpl
 
 home: https://github.com/overture-stack/arranger/tree/main
 
@@ -28,4 +18,4 @@ type: application
 
 # This is the chart version. This version number should be incremented each time you make changes
 # to the chart and its templates, including the app version.
-version: 0.3.2
+version: 0.4.0

@@ -1,4 +1,4 @@
-{{- $ingress := ternary .Values.apiIngress .Values.ingress .Values.apiIngress.enabled }}
+{{- $ingress := .Values.ingress }}
 
 {{- if $ingress.enabled -}}
   {{- $fullName := include "arranger.fullname" . -}}

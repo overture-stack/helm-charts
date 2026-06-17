@@ -11,13 +11,6 @@ spec:
       protocol: TCP
       name: {{ .Chart.Name }}-server
 
-  {{- if .Values.uiConfig.enabled }}
-    - port: {{ .Values.service.uiPort }}
-      targetPort: {{ .Chart.Name }}-ui
-      protocol: TCP
-      name: {{ .Chart.Name }}-ui
-  {{- end }}
-
   selector:
     {{- include "arranger.selectorLabels" . | nindent 4 }}
 

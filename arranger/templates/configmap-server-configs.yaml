@@ -1,42 +1,47 @@
+{{- $seen := dict -}}
+{{- range .Values.config.catalogues -}}
+  {{- if hasKey $seen .id -}}
+    {{- fail (printf "Duplicate catalogue id %q — ids must be unique DNS labels" .id) -}}
+  {{- end -}}
+  {{- $_ := set $seen .id true -}}
+{{- end -}}
+{{- range .Values.config.catalogues }}
+---
 apiVersion: v1
 
 kind: ConfigMap
 
 metadata:
-  name: {{ include "arranger.fullname" . }}-server-configs
+  name: {{ include "arranger.fullname" $ }}-server-configs-{{ .id }}
   labels:
-    app.kubernetes.io/name: {{ include "arranger.name" . }}
-    helm.sh/chart: {{ include "arranger.chart" . }}
-    app.kubernetes.io/instance: {{ .Release.Name }}
-    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/name: {{ include "arranger.name" $ }}
+    helm.sh/chart: {{ include "arranger.chart" $ }}
+    app.kubernetes.io/instance: {{ $.Release.Name }}
+    app.kubernetes.io/managed-by: {{ $.Release.Service }}
 
 data:
-  {{- $baseConfigs := coalesce .Values.config.components.baseConfigs .Values.baseConfigs -}}
-  {{- if $baseConfigs }}
+  {{- if .configs.base }}
   base.json: |
-    {{- include "common.tplvalues.render" ( dict "value" $baseConfigs "context" $ ) | fromYaml | toPrettyJson | nindent 4 }}
+    {{- .configs.base | toPrettyJson | nindent 4 }}
   {{- end }}
 
-  {{- $extendedConfigs := coalesce .Values.config.components.extendedConfigs .Values.extendedConfigs -}}
-  {{- if $extendedConfigs }}
+  {{- if .configs.extended }}
   extended.json: |
-    {{- include "common.tplvalues.render" ( dict "value" $extendedConfigs "context" $ ) | fromYaml | toPrettyJson | nindent 4 }}
+    {{- .configs.extended | toPrettyJson | nindent 4 }}
   {{- end }}
 
-  {{- $facetsConfigs := coalesce .Values.config.components.facetsConfigs .Values.facetsConfigs -}}
-  {{- if $facetsConfigs }}
+  {{- if .configs.facets }}
   facets.json: |
-    {{- include "common.tplvalues.render" ( dict "value" $facetsConfigs "context" $ ) | fromYaml | toPrettyJson | nindent 4 }}
+    {{- .configs.facets | toPrettyJson | nindent 4 }}
   {{- end }}
 
-  {{- $matchboxConfigs := coalesce .Values.config.components.matchboxConfigs .Values.matchboxConfigs -}}
-  {{- if $matchboxConfigs }}
+  {{- if .configs.matchbox }}
   matchbox.json: |
-    {{- include "common.tplvalues.render" ( dict "value" $matchboxConfigs "context" $ ) | fromYaml | toPrettyJson | nindent 4 }}
+    {{- .configs.matchbox | toPrettyJson | nindent 4 }}
   {{- end }}
 
-  {{- $tableConfigs := coalesce .Values.config.components.tableConfigs .Values.tableConfigs -}}
-  {{- if $tableConfigs }}
+  {{- if .configs.table }}
   table.json: |
-    {{- include "common.tplvalues.render" ( dict "value" $tableConfigs "context" $ ) | fromYaml | toPrettyJson | nindent 4 }}
+    {{- .configs.table | toPrettyJson | nindent 4 }}
   {{- end }}
+{{- end }}
