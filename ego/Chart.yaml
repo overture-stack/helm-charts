@@ -1,4 +1,4 @@
 apiVersion: v1
-description: A Helm chart for ego
+description: Helm chart — Ego auth server
 name: ego
 version: 3.2.1

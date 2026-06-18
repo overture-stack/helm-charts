@@ -1,5 +1,5 @@
 apiVersion: v1
 appVersion: "1.1"
-description: A Helm chart for Kubernetes
+description: Helm chart — Song metadata tracking service
 name: song
 version: 0.12.4

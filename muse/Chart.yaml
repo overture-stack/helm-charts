@@ -1,6 +1,6 @@
 apiVersion: v2
 name: muse
-description: A Helm chart for Kubernetes
+description: Helm chart — Muse metadata service
 
 # A chart can be either an 'application' or a 'library' chart.
 #

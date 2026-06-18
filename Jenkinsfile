@@ -1,4 +1,4 @@
-@Library('jenkins-pipeline-library@add-softeng-charts') _
+@Library('jenkins-pipeline-library@master') _
 
 pipelineSoftEngBuildHelmCharts(
   credentialsId: 'overturebio-ghcr',
