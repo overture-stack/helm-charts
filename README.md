@@ -4,11 +4,25 @@ Repository for Helm charts used by the Overture stack.
 
 ## Using these charts
 
+Charts are published as OCI artifacts to `ghcr.io/overture-stack/helm-charts`. No `helm repo add` step is required.
+
+**Helm CLI:**
+
 ```shell
 helm install <release-name> oci://ghcr.io/overture-stack/helm-charts/<chart-name> --version <version>
 ```
 
-Charts are published as OCI artifacts to `ghcr.io/overture-stack/helm-charts`. No `helm repo add` step is required.
+**Terraform (`hashicorp/helm` provider):**
+
+```hcl
+resource "helm_release" "example" {
+  repository = "oci://ghcr.io/overture-stack/helm-charts"
+  chart      = "<chart-name>"
+  version    = "<version>"
+  namespace  = "<namespace>"
+  # ...
+}
+```
 
 ## Publishing
 
@@ -19,6 +33,12 @@ Bump `version` in `<chart-name>/Chart.yaml` and push to `main`. Jenkins lints, p
 # Upgrade notes
 
 ## Arranger
+
+### Version 0.4.1
+
+**New value:** `config.elasticsearch.password.secretKey` - explicit key name to read from the password secret. When omitted, the chart falls back to using the `username` value as the key (backwards-compatible with 0.4.0).
+
+Pods now automatically restart when catalogue configs change. A `checksum/config` annotation on the pod template is computed from `config.catalogues` at render time; Helm triggers a rolling restart whenever it changes.
 
 ### Version 0.4.0 — breaking changes
 

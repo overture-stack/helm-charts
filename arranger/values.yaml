@@ -34,6 +34,7 @@ config:
     host: http://elasticsearch:9200
     password:
       secretName:
+      secretKey: # defaults to the username value when empty
     setsIndex: arranger-sets
     setsType: arranger-sets
     username:

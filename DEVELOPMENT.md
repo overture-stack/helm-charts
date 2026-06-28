@@ -67,11 +67,25 @@ Do not commit `.tgz` files to `main`.
 
 ## Using this repository's charts
 
+Charts are published as OCI artifacts to `ghcr.io/overture-stack/helm-charts`. No `helm repo add` step is required.
+
+**Helm CLI:**
+
 ```shell
 helm install <release-name> oci://ghcr.io/overture-stack/helm-charts/<chart-name> --version <version>
 ```
 
-Charts are published as OCI artifacts to `ghcr.io/overture-stack/helm-charts`. No `helm repo add` step is required.
+**Terraform (`hashicorp/helm` provider):**
+
+```hcl
+resource "helm_release" "example" {
+  repository = "oci://ghcr.io/overture-stack/helm-charts"
+  chart      = "<chart-name>"
+  version    = "<version>"
+  namespace  = "<namespace>"
+  # ...
+}
+```
 
 ## Jenkins CI
 

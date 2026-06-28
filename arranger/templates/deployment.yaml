@@ -18,10 +18,11 @@ spec:
 
   template:
     metadata:
-    {{- with .Values.podAnnotations }}
       annotations:
+        checksum/config: {{ toJson .Values.config.catalogues | sha256sum }}
+      {{- with .Values.podAnnotations }}
         {{- toYaml . | nindent 8 }}
-    {{- end }}
+      {{- end }}
 
       labels:
         {{- include "arranger.selectorLabels" . | nindent 8 }}
@@ -87,7 +88,7 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: {{ .Values.config.elasticsearch.password.secretName }}
-                  key: {{ .Values.config.elasticsearch.username }}
+                  key: {{ .Values.config.elasticsearch.password.secretKey | default .Values.config.elasticsearch.username }}
 
             - name: ES_USER
               value: {{ .Values.config.elasticsearch.username }}
